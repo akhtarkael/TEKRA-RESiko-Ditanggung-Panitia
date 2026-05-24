@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>TEKRA 2026 - System Overview</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
+    <style>
+        body { font-family: 'Poppins', sans-serif !important; }
+        .font-label-caps, .font-headline-lg, .font-headline-md, .font-headline-lg-mobile, .font-display-metric, .font-body-lg, .font-status-pill, .font-body-sm {
+            font-family: 'Poppins', sans-serif !important;
+        }
+        .bg-grid-pattern {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+        .card-hover:hover {
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+            transition: all 0.2s ease-in-out;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: { extend: { colors: {
+            "primary-fixed": "#6ffbbe", "outline-variant": "#bbcabf", "on-surface-variant": "#3c4a42",
+            "on-surface": "#191c1d", "surface": "#f8f9fa", "primary-container": "#10b981",
+            "secondary": "#5f5e5e", "error": "#ba1a1a", "primary": "#006c49",
+            "surface-container-lowest": "#ffffff", "surface-container": "#edeeef", "surface-container-high": "#e7e8e9"
+          }}}}
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-[260px] z-50 bg-[#2e3132] border-r border-outline-variant flex flex-col py-6 overflow-y-auto">
+    <div class="px-6 mb-6">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 rounded-lg bg-primary-fixed flex items-center justify-center">
+                <span class="material-symbols-outlined text-[#2e3132]" style="font-variation-settings: 'FILL' 1;">developer_board</span>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-primary-fixed">HYDRA</h1>
+                <p class="text-xs text-[#c8c6c5] uppercase tracking-wider">Smart Monitoring</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gedung A — Active -->
+    <div class="mb-1">
+        <button onclick="toggleGedung('gedung-a')" class="w-full flex items-center justify-between px-6 py-2 text-[#c8c6c5] hover:text-primary-fixed transition-colors">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">apartment</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase">Gedung A</span>
+            </div>
+            <span id="arrow-gedung-a" class="material-symbols-outlined text-[16px] transition-transform duration-200">expand_more</span>
+        </button>
+        <div id="gedung-a" class="flex flex-col gap-0.5 px-3">
+            <!-- A2.23 — Active Room -->
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg border-l-2 border-primary-container bg-primary-container/15 text-primary-fixed">
+                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">sensors</span>
+                <span class="text-xs font-semibold">A2.23</span>
+                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+            </a>
+            <!-- Inactive rooms -->
+            <button onclick="showNotConnected('A2.16')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">A2.16</span>
+            </button>
+            <button onclick="showNotConnected('A2.16A')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">A2.16A</span>
+            </button>
+            <button onclick="showNotConnected('A2.17')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">A2.17</span>
+            </button>
+            <button onclick="showNotConnected('A2.22')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">A2.22</span>
+            </button>
+            <button onclick="showNotConnected('A2.24')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">A2.24</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Gedung G -->
+    <div class="mb-1">
+        <button onclick="toggleGedung('gedung-g')" class="w-full flex items-center justify-between px-6 py-2 text-[#7a8a82] hover:text-[#c8c6c5] transition-colors">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">apartment</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase">Gedung G</span>
+            </div>
+            <span id="arrow-gedung-g" class="material-symbols-outlined text-[16px] transition-transform duration-200 rotate-[-90deg]">expand_more</span>
+        </button>
+        <div id="gedung-g" class="hidden flex-col gap-0.5 px-3">
+            <button onclick="showNotConnected('Gedung G')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">Semua Ruangan</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Gedung F -->
+    <div class="mb-1">
+        <button onclick="toggleGedung('gedung-f')" class="w-full flex items-center justify-between px-6 py-2 text-[#7a8a82] hover:text-[#c8c6c5] transition-colors">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">apartment</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase">Gedung F</span>
+            </div>
+            <span id="arrow-gedung-f" class="material-symbols-outlined text-[16px] transition-transform duration-200 rotate-[-90deg]">expand_more</span>
+        </button>
+        <div id="gedung-f" class="hidden flex-col gap-0.5 px-3">
+            <button onclick="showNotConnected('Gedung F')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">Semua Ruangan</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Gedung Riset Inovasi -->
+    <div class="mb-1">
+        <button onclick="toggleGedung('gedung-ri')" class="w-full flex items-center justify-between px-6 py-2 text-[#7a8a82] hover:text-[#c8c6c5] transition-colors">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">science</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase">Riset Inovasi</span>
+            </div>
+            <span id="arrow-gedung-ri" class="material-symbols-outlined text-[16px] transition-transform duration-200 rotate-[-90deg]">expand_more</span>
+        </button>
+        <div id="gedung-ri" class="hidden flex-col gap-0.5 px-3">
+            <button onclick="showNotConnected('Gedung Riset Inovasi')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">Semua Ruangan</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Gedung Kreativitas Mahasiswa -->
+    <div class="mb-1">
+        <button onclick="toggleGedung('gedung-km')" class="w-full flex items-center justify-between px-6 py-2 text-[#7a8a82] hover:text-[#c8c6c5] transition-colors">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">palette</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase">GKM</span>
+            </div>
+            <span id="arrow-gedung-km" class="material-symbols-outlined text-[16px] transition-transform duration-200 rotate-[-90deg]">expand_more</span>
+        </button>
+        <div id="gedung-km" class="hidden flex-col gap-0.5 px-3">
+            <button onclick="showNotConnected('Gedung Kreativitas Mahasiswa')" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#7a8a82] hover:bg-white/5 hover:text-[#c8c6c5] transition-all text-left">
+                <span class="material-symbols-outlined text-[16px]">sensors_off</span>
+                <span class="text-xs font-semibold">Semua Ruangan</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-auto px-6 pt-4 flex flex-col gap-4">
+        <button class="w-full bg-error text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+            <span class="material-symbols-outlined text-[18px]">warning</span>
+            Emergency Shutdown
+        </button>
+    </div>
+</nav>
+
+<!-- Modal: Not Connected -->
+<div id="modal-not-connected" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="relative bg-[#2e3132] border border-outline-variant rounded-2xl p-6 w-[320px] shadow-2xl flex flex-col items-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-[#3a4a42] flex items-center justify-center">
+            <span class="material-symbols-outlined text-[#7a8a82] text-[32px]">sensors_off</span>
+        </div>
+        <div class="text-center">
+            <h3 class="text-base font-bold text-primary-fixed mb-1">Ruangan Tidak Terhubung</h3>
+            <p class="text-sm text-[#7a8a82]"><span id="modal-room-name" class="text-[#c8c6c5] font-semibold"></span> belum terpasang sensor atau belum terhubung ke jaringan HYDRA.</p>
+        </div>
+        <button onclick="closeModal()" class="w-full bg-primary text-white text-sm font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity">
+            Tutup
+        </button>
+    </div>
+</div>
+
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-[260px] flex flex-col h-screen bg-background relative bg-grid-pattern">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 right-0 w-[calc(100%-260px)] z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant flex justify-between items-center h-16 px-8">
+        <div class="flex items-center gap-4">
+            <h2 class="text-xl font-bold text-primary">Monitored Area Overview</h2>
+            <div class="h-4 w-px bg-outline-variant"></div>
+            <div class="flex items-center gap-2 px-2 py-1 rounded bg-primary-container/10 text-primary-container border border-primary-container/20">
+                <div id="mqtt-status-dot" class="w-1.5 h-1.5 rounded-full bg-error"></div>
+                <span id="mqtt-status-text" class="text-sm font-semibold">MQTT Offline</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="text-xl text-on-surface-variant font-mono tracking-tight" id="live-clock">12:45:30 PM</div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Content -->
+    <main class="flex-1 overflow-y-auto pt-[88px] px-8 pb-8">
+        <div class="max-w-7xl mx-auto flex flex-col gap-4">
+            
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <!-- Humidity -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Humidity</span>
+                        <span class="material-symbols-outlined text-primary text-[20px]">water_drop</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <span id="val-humidity" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                        <span class="text-sm text-secondary">%</span>
+                    </div>
+                </div>
+                <!-- Gas Level -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Gas Level</span>
+                        <span class="material-symbols-outlined text-[#b91a24] text-[20px]">air</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <span id="val-gas" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                    </div>
+                </div>
+                <!-- Luminance -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Luminance</span>
+                        <span class="material-symbols-outlined text-primary text-[20px]">light_mode</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <span id="val-ldr" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                    </div>
+                </div>
+                <!-- PIR -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PIR Motion</span>
+                        <span class="material-symbols-outlined text-primary text-[20px]">motion_sensor_active</span>
+                    </div>
+                    <div class="mt-2">
+                        <span id="val-pir" class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-sm font-semibold border border-outline-variant">Clear</span>
+                    </div>
+                </div>
+                <!-- Occupancy -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Occupancy</span>
+                        <span class="material-symbols-outlined text-secondary text-[20px]">meeting_room</span>
+                    </div>
+                    <div class="mt-2">
+                        <span id="val-occupancy" class="px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-sm font-semibold border border-outline-variant">Vacant</span>
+                    </div>
+                </div>
+                <!-- Master Switch -->
+                <div class="bg-surface-container-lowest border border-primary-container rounded-xl p-5 card-hover relative overflow-hidden">
+                    <div class="absolute inset-0 bg-primary-container/5"></div>
+                    <div class="relative flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-primary uppercase tracking-wider">Master Power</span>
+                        <span class="material-symbols-outlined text-primary text-[20px]">power_settings_new</span>
+                    </div>
+                    <div class="relative mt-2">
+                        <span id="val-master" class="px-3 py-1 bg-primary text-white rounded-full text-sm font-semibold flex items-center gap-2 w-max">
+                            OFF
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Grid: Actuators & Camera -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
+                <!-- Actuator Status -->
+                <div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col">
+                    <div class="flex items-center justify-between mb-6 border-b border-outline-variant pb-4">
+                        <h3 class="text-xl font-bold text-on-surface">Actuator Status</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                        <!-- Lighting -->
+                        <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
+                            </div>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Main Lighting</span>
+                            <span id="val-lampu" class="text-xl font-bold text-on-surface">OFF</span>
+                        </div>
+                        <!-- Fan -->
+                        <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="material-symbols-outlined text-on-surface-variant">mode_fan</span>
+                            </div>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Ceiling Fan / Motor</span>
+                            <span id="val-motor" class="text-xl font-bold text-on-surface">OFF</span>
+                        </div>
+                        <!-- Ventilation -->
+                        <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="material-symbols-outlined text-on-surface-variant">hvac</span>
+                            </div>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Ventilation Servo</span>
+                            <span id="val-servo" class="text-xl font-bold text-on-surface">CLOSED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Feed -->
+                <div class="bg-[#2e3132] border border-outline rounded-xl p-1 flex flex-col overflow-hidden relative min-h-[250px]">
+                    <div class="absolute top-4 left-4 z-10 flex items-center gap-2 px-2 py-1 rounded bg-black/50 backdrop-blur border border-white/10">
+                        <div id="cam-dot" class="w-2 h-2 rounded-full bg-error"></div>
+                        <span class="text-xs font-bold tracking-wider text-white">ESP-CAM</span>
+                    </div>
+                    <div class="absolute top-4 right-4 z-10 flex items-center gap-2 px-2 py-1 rounded bg-primary/20 backdrop-blur border border-primary/50 text-primary-fixed text-xs font-bold">
+                        <span id="cam-status-text">Standby</span>
+                    </div>
+                    <div class="flex-1 rounded-lg overflow-hidden relative bg-black flex items-center justify-center">
+                        <img id="cam-image" src="http://127.0.0.1:8000/api/video_feed" alt="Camera Feed" class="object-contain w-full h-full" onerror="this.style.display='none'"/>
+                        <span id="cam-fallback" class="text-white text-sm" style="display:none;">Stream is offline</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Power Monitoring Card -->
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col mt-4">
+                <div class="flex items-center justify-between mb-4 border-b border-outline-variant pb-3">
+                    <h3 class="text-xl font-bold text-on-surface">Power Consumption Monitoring</h3>
+                    <span class="material-symbols-outlined text-primary">bolt</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- ADC Raw Value -->
+                    <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Sensor ADC Raw Value</span>
+                        <div class="flex items-baseline gap-1 mt-2">
+                            <span id="val-acs-adc" class="text-[36px] font-bold text-on-surface leading-none">0</span>
+                            <span class="text-xs text-secondary font-semibold">Units</span>
+                        </div>
+                    </div>
+                    <!-- Calculated Wattage -->
+                    <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Calculated Power Load</span>
+                        <div class="flex items-baseline gap-1 mt-2">
+                            <span id="val-acs-watt" class="text-[36px] font-bold text-primary leading-none">0.00</span>
+                            <span class="text-xs text-secondary font-semibold">Watt</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col overflow-hidden mt-4">
+                <div class="flex items-center justify-between p-4 border-b border-outline-variant bg-surface">
+                    <h3 class="text-xl font-bold text-on-surface">System Activity Log</h3>
+                    <span class="material-symbols-outlined text-on-surface-variant">history</span>
+                </div>
+                <div class="p-0 overflow-y-auto max-h-[250px]">
+                    <table class="w-full text-left border-collapse">
+                        <tbody id="log-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // 1. Live Clock
+    function updateClock() {
+        const now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        let seconds = now.getSeconds();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+        document.getElementById('live-clock').innerText = hours + ':' + minutes + ':' + seconds + ' ' + ampm;
+    }
+    setInterval(updateClock, 1000);
+
+    // 2. Fetch API Data & Update UI
+    async function fetchDashboardData() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/data');
+            const data = await response.json();
+
+            // Sensor utama
+            document.getElementById('val-humidity').innerText = data.sensor.kelembapan ?? 0;
+            document.getElementById('val-gas').innerText      = data.sensor.gas ?? 0;
+            document.getElementById('val-ldr').innerText      = data.sensor.kecerahan ?? 0;
+
+            // ACS712 — guard undefined & NaN
+            const adcVal = data.sensor.adc_acs;
+            document.getElementById('val-acs-adc').innerText =
+                (adcVal !== undefined && adcVal !== null) ? adcVal : '0';
+
+            const wattVal = parseFloat(data.sensor.daya_watt);
+            document.getElementById('val-acs-watt').innerText =
+                isNaN(wattVal) ? '0.00' : wattVal.toFixed(2);
+
+            // MQTT status
+            const mqttDot  = document.getElementById('mqtt-status-dot');
+            const mqttText = document.getElementById('mqtt-status-text');
+            if (data.status.mqtt_ok) {
+                mqttDot.className  = "w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse";
+                mqttText.innerText = "MQTT Connected";
+            } else {
+                mqttDot.className  = "w-1.5 h-1.5 rounded-full bg-error";
+                mqttText.innerText = "MQTT Offline";
+            }
+
+            // PIR
+            const pirEl = document.getElementById('val-pir');
+            pirEl.innerText = data.sensor.gerakan ? "Detected" : "Clear";
+            pirEl.className = data.sensor.gerakan
+                ? "px-3 py-1 bg-[#ffdad6] text-[#ba1a1a] rounded-full text-sm font-semibold border border-[#ffdad6]"
+                : "px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-sm font-semibold border border-outline-variant";
+
+            // Occupancy
+            const occEl = document.getElementById('val-occupancy');
+            occEl.innerText = data.system.ada_orang ? "Occupied" : "Vacant";
+            occEl.className = data.system.ada_orang
+                ? "px-3 py-1 bg-[#10b981]/20 text-[#006c49] rounded-full text-sm font-semibold border border-[#10b981]/30"
+                : "px-3 py-1 bg-surface-container text-on-surface-variant rounded-full text-sm font-semibold border border-outline-variant";
+
+            // Master Switch
+            const masterEl = document.getElementById('val-master');
+            masterEl.innerText = data.sensor.saklar ? "ON" : "OFF (Energy Save)";
+            masterEl.className = data.sensor.saklar
+                ? "px-3 py-1 bg-primary text-white rounded-full text-sm font-semibold flex items-center gap-2 w-max"
+                : "px-3 py-1 bg-surface-container text-secondary rounded-full text-sm font-semibold flex items-center gap-2 w-max";
+
+            // Actuators
+            document.getElementById('val-lampu').innerText = data.aktuator.lampu  ? "ON"      : "OFF";
+            document.getElementById('val-motor').innerText = data.aktuator.motor  ? "RUNNING" : "OFF";
+            document.getElementById('val-servo').innerText = data.aktuator.servo === 90 ? "OPEN" : "CLOSED";
+
+            // Camera
+            const camDot      = document.getElementById('cam-dot');
+            const camText     = document.getElementById('cam-status-text');
+            const camImg      = document.getElementById('cam-image');
+            const camFallback = document.getElementById('cam-fallback');
+            if (data.system.camera_open) {
+                camDot.className   = "w-2 h-2 rounded-full bg-[#6ffbbe] animate-pulse";
+                camText.innerText  = "Streaming";
+                camImg.style.display      = "block";
+                camFallback.style.display = "none";
+            } else {
+                camDot.className   = "w-2 h-2 rounded-full bg-secondary";
+                camText.innerText  = "Standby";
+                camImg.style.display      = "none";
+                camFallback.style.display = "block";
+            }
+
+            // Activity Log
+            const tbody = document.getElementById('log-table-body');
+            tbody.innerHTML = '';
+            data.logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-outline-variant/30 hover:bg-surface-container-low transition-colors";
+                let badgeColor = "bg-surface-container-high text-on-surface-variant";
+                if (log.level === "alert") badgeColor = "bg-[#ffdad6] text-[#ba1a1a]";
+                if (log.level === "ok")    badgeColor = "bg-[#10b981]/20 text-[#006c49]";
+                if (log.level === "warn")  badgeColor = "bg-[#ffb3ad] text-[#93000a]";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 w-[180px] font-mono text-sm text-secondary">${log.ts}</td>
+                    <td class="py-3 px-4">
+                        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${badgeColor} mr-2">${log.level}</span>
+                        <span class="text-sm text-on-surface">${log.msg}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } catch (error) {
+            console.error('Gagal mengambil data dari backend:', error);
+        }
+    }
+
+
+    function toggleGedung(id) {
+        const panel = document.getElementById(id);
+        const arrow = document.getElementById('arrow-' + id);
+        const isHidden = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !isHidden);
+        panel.classList.toggle('flex', isHidden);
+        arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+    }
+
+    function showNotConnected(roomName) {
+        document.getElementById('modal-room-name').innerText = roomName;
+        document.getElementById('modal-not-connected').classList.remove('hidden');
+    }
+    function closeModal() {
+        document.getElementById('modal-not-connected').classList.add('hidden');
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    fetchDashboardData();
+    setInterval(fetchDashboardData, 500);
+</script>
+</body>
+</html>
