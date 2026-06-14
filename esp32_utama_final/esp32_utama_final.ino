@@ -4,6 +4,7 @@
 #include <DHT.h>
 #include <esp_task_wdt.h>
 #include <ArduinoJson.h>
+#include <PZEM004Tv30.h>
 
 // =============================================
 // Konfig Wifi dan MQTT
@@ -23,6 +24,8 @@ const char* TOPIC_CMD_SERVO = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/servo
 // =============================================
 #define DHTPIN     32
 #define DHTTYPE    DHT11
+#define PZEM_RX    16
+#define PZEM_TX    4
 
 const int pir1      = 34;
 const int pir2      = 18;
@@ -41,6 +44,7 @@ DHT dht(DHTPIN, DHTTYPE);
 Servo myservo;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+PZEM004Tv30 pzem(Serial2, PZEM_RX, PZEM_TX);
 
 // =============================================
 // Struct dari data
@@ -53,9 +57,15 @@ struct DataSensor {
   int statusMotor;
   int statusLampu;
   int saklar;
+  float tegangan;
+  float arus;
+  float daya;
+  float energi;
+  float frekuensi;
+  float powerFactor;
 };
 
-DataSensor dataSistemShared = {0, 0, 0, 0, 0, 0, 1};
+DataSensor dataSistemShared = {0, 0, 0, 0, 0, 0, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 volatile int   cmdLampu = 0;
 volatile int   cmdMotor = 0;
@@ -164,7 +174,7 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(buttonPin), buttonISR, FALLING);
 
-  xTaskCreate(TaskBacaSensor,       "BacaSensor", 2048, NULL, 2, NULL);
+  xTaskCreate(TaskBacaSensor,       "BacaSensor", 4096, NULL, 2, NULL);
   xTaskCreate(TaskEksekusiAktuator, "Aktuator",   2048, NULL, 2, NULL);
   xTaskCreate(TaskPublishSensor,    "Publish",    4096, NULL, 1, NULL);
   xTaskCreate(TaskMQTTLoop,         "MQTTLoop",   4096, NULL, 1, NULL);
@@ -187,15 +197,28 @@ void TaskBacaSensor(void *pvParameters) {
     int ldr   = analogRead(ldrPin);
     int pir   = digitalRead(pir1) || digitalRead(pir2);
     float hum = dht.readHumidity();
-    
+
     int saklarStatus = (digitalRead(saklarPin) == LOW) ? 1 : 0;
 
+    float pzemV  = pzem.voltage();
+    float pzemA  = pzem.current();
+    float pzemW  = pzem.power();
+    float pzemKwh = pzem.energy();
+    float pzemHz = pzem.frequency();
+    float pzemPF = pzem.pf();
+
     portENTER_CRITICAL(&dataMux);
-    dataSistemShared.gas      = gas;
+    dataSistemShared.gas       = gas;
     dataSistemShared.kecerahan = ldr;
     dataSistemShared.gerakan   = pir;
     dataSistemShared.saklar    = saklarStatus;
-    if (!isnan(hum) && hum > 0) dataSistemShared.kelembapan = (int)hum;
+    if (!isnan(hum) && hum > 0)  dataSistemShared.kelembapan  = (int)hum;
+    if (!isnan(pzemV))  dataSistemShared.tegangan    = pzemV;
+    if (!isnan(pzemA))  dataSistemShared.arus        = pzemA;
+    if (!isnan(pzemW))  dataSistemShared.daya        = pzemW;
+    if (!isnan(pzemKwh)) dataSistemShared.energi     = pzemKwh;
+    if (!isnan(pzemHz)) dataSistemShared.frekuensi   = pzemHz;
+    if (!isnan(pzemPF)) dataSistemShared.powerFactor = pzemPF;
     portEXIT_CRITICAL(&dataMux);
     vTaskDelay(200 / portTICK_PERIOD_MS);
   }
@@ -240,16 +263,21 @@ void TaskPublishSensor(void *pvParameters) {
       toggleCopy = motorToggleState;
       portEXIT_CRITICAL(&timerMux);
 
-      // Memperbesar kapasitas JSON document karena ada tambahan key saklar
-      StaticJsonDocument<192> doc;
+      StaticJsonDocument<384> doc;
       doc["kelembapan"]   = d.kelembapan;
       doc["gas"]          = d.gas;
       doc["kecerahan"]    = d.kecerahan;
       doc["gerakan"]      = d.gerakan;
-      doc["toggleMotor"]  = toggleCopy ? 1 : 0; 
-      doc["saklar"]       = d.saklar; // Kirim state saklar Layer 3 ke laptop
+      doc["toggleMotor"]  = toggleCopy ? 1 : 0;
+      doc["saklar"]       = d.saklar;
+      doc["tegangan"]     = d.tegangan;
+      doc["arus"]         = d.arus;
+      doc["daya"]         = d.daya;
+      doc["energi"]       = d.energi;
+      doc["frekuensi"]    = d.frekuensi;
+      doc["powerFactor"]  = d.powerFactor;
 
-      char buffer[192];
+      char buffer[384];
       serializeJson(doc, buffer);
       mqttClient.publish(TOPIC_SENSOR, buffer);
     }
@@ -308,6 +336,12 @@ void TaskSerialLog(void *pvParameters) {
     Serial.print("  [SENSOR] Gas         : "); Serial.println(d.gas);
     Serial.print("  [SENSOR] Kecerahan   : "); Serial.println(d.kecerahan);
     Serial.print("  [SENSOR] Gerakan     : "); Serial.println(d.gerakan ? "TERDETEKSI (!)" : "Tidak Terdeteksi");
+    Serial.print("  [PZEM]   Tegangan    : "); Serial.print(d.tegangan, 1); Serial.println(" V");
+    Serial.print("  [PZEM]   Arus        : "); Serial.print(d.arus, 3); Serial.println(" A");
+    Serial.print("  [PZEM]   Daya        : "); Serial.print(d.daya, 1); Serial.println(" W");
+    Serial.print("  [PZEM]   Energi      : "); Serial.print(d.energi, 3); Serial.println(" kWh");
+    Serial.print("  [PZEM]   Frekuensi   : "); Serial.print(d.frekuensi, 1); Serial.println(" Hz");
+    Serial.print("  [PZEM]   Power Factor: "); Serial.println(d.powerFactor, 2);
     Serial.print("  [CMD]    Lampu       : "); Serial.println(cmdLampu ? "NYALA" : "MATI");
     Serial.print("  [CMD]    Motor       : "); Serial.println(cmdMotor ? "NYALA" : "MATI");
     Serial.print("  [CMD]    Servo       : "); Serial.print(cmdServo); Serial.println("°");

@@ -41,7 +41,7 @@ ESP_IP_URL   = "http://ganti.ip.address.streaming/" #ganti ip address streaming 
 # Module-Level State
 # =============================================
 _shared = {
-    "sensor": {"kelembapan":0,"gas":0,"kecerahan":0,"gerakan":0,"toggleMotor":0,"saklar":1},
+    "sensor": {"kelembapan":0,"gas":0,"kecerahan":0,"gerakan":0,"toggleMotor":0,"saklar":1,"tegangan":0.0,"arus":0.0,"daya":0.0,"energi":0.0,"frekuensi":0.0,"powerFactor":0.0},
     "aktuator": {"lampu":0,"motor":0,"servo":0},
     "status": {"mqtt_ok":False},
     "_servo_active":False, "_servo_timer":0,
@@ -88,6 +88,12 @@ def _on_message(client, userdata, msg):
             s["gerakan"]     = p.get("gerakan",       0)
             s["toggleMotor"] = p.get("toggleMotor",  0)
             s["saklar"]      = p.get("saklar",       1)
+            s["tegangan"]    = p.get("tegangan",     0.0)
+            s["arus"]        = p.get("arus",         0.0)
+            s["daya"]        = p.get("daya",         0.0)
+            s["energi"]      = p.get("energi",       0.0)
+            s["frekuensi"]   = p.get("frekuensi",    0.0)
+            s["powerFactor"] = p.get("powerFactor",  0.0)
             
             _history["gas"].append(s["gas"])
             _history["hum"].append(s["kelembapan"])
