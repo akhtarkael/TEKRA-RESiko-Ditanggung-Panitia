@@ -1,3 +1,6 @@
 .vscode/**
 **/.vscode/**
 **/build/**
+**/.env
+**/venv/
+**/__pycache__/

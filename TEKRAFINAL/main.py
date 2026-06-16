@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import paho.mqtt.client as mqtt
+from dotenv import load_dotenv
 import json
+import ssl
 import time
 import threading
 import cv2
@@ -11,6 +13,8 @@ from ultralytics import YOLO
 from collections import deque
 from datetime import datetime
 import uvicorn
+
+load_dotenv()
 
 # =============================================
 # Setup FastAPI
@@ -26,25 +30,27 @@ app.add_middleware(
 )
 
 # =============================================
-# Konfigurasi MQTT
+# Konfigurasi MQTT — HiveMQ Cloud (TLS)
+# Isi dengan kredensial dari console.hivemq.cloud
 # =============================================
-BROKER = "broker.hivemq.com"
-PORT   = 1883
-PREFIX = "tekra2026/RESikoDitanggungPanitia"
+BROKER     = os.getenv("MQTT_BROKER")
+PORT       = int(os.getenv("MQTT_PORT"))
+MQTT_USER  = os.getenv("MQTT_USER")
+MQTT_PASS  = os.getenv("MQTT_PASS")
+PREFIX     = "tekra2026/RESikoDitanggungPanitia"
 TOPIC_SENSOR = f"{PREFIX}/esp32/sensor"
 TOPIC_LAMPU  = f"{PREFIX}/esp32/cmd/lampu"
 TOPIC_MOTOR  = f"{PREFIX}/esp32/cmd/motor"
 TOPIC_SERVO  = f"{PREFIX}/esp32/cmd/servo"
-ESP_IP_URL   = "http://ganti.ip.address.streaming/" #ganti ip address streaming espcam
+ESP_IP_URL   = "http://your-ip-addr/" #ganti ip address streaming espcam
 
 # =============================================
 # Module-Level State
 # =============================================
 _shared = {
-    "sensor": {"kelembapan":0,"gas":0,"kecerahan":0,"gerakan":0,"toggleMotor":0,"saklar":1,"tegangan":0.0,"arus":0.0,"daya":0.0,"energi":0.0,"frekuensi":0.0,"powerFactor":0.0},
+    "sensor": {"kelembapan":0,"suhu":0,"gas":0,"kecerahan":0,"gerakan":0,"toggleMotor":0,"saklar":1,"tegangan":0.0,"arus":0.0,"daya":0.0,"energi":0.0,"frekuensi":0.0,"powerFactor":0.0},
     "aktuator": {"lampu":0,"motor":0,"servo":0},
     "status": {"mqtt_ok":False},
-    "_servo_active":False, "_servo_timer":0,
     "_motor_locked":False, "_motor_timer":0,
     "_waktu_ada_orang":time.time(),
     "_status_ada_orang":False,
@@ -83,6 +89,7 @@ def _on_message(client, userdata, msg):
         with _lock:
             s = _shared["sensor"]
             s["kelembapan"]  = p.get("kelembapan",  0)
+            s["suhu"]        = p.get("suhu",        0)
             s["gas"]         = p.get("gas",         0)
             s["kecerahan"]   = p.get("kecerahan",   0)
             s["gerakan"]     = p.get("gerakan",       0)
@@ -122,25 +129,24 @@ def _loop_otomasi():
 
         # Layer 1 — Emergency
         if d["gas"] > 500 or d["kelembapan"] > 75:
-            mc.publish(TOPIC_SERVO, json.dumps({"angle": 90}))
             mc.publish(TOPIC_MOTOR, json.dumps({"status": 1}))
             with _lock:
-                ak["servo"]=90; ak["motor"]=1
-                _shared["_servo_active"]=True; _shared["_servo_timer"]=now
+                ak["motor"]=1
                 _shared["_motor_locked"]=True; _shared["_motor_timer"]=now
             if d["gas"] > 500: _log(f"EMERGENCY — Gas level critical: {d['gas']}", "alert")
             if d["kelembapan"] > 75: _log(f"EMERGENCY — Humidity critical: {d['kelembapan']}%", "alert")
         else:
             with _lock:
-                sa=_shared["_servo_active"]; st_=_shared["_servo_timer"]
                 ml=_shared["_motor_locked"]; mt=_shared["_motor_timer"]
-            if sa and (now-st_ >= 10):
-                mc.publish(TOPIC_SERVO, json.dumps({"angle":0}))
-                with _lock: ak["servo"]=0; _shared["_servo_active"]=False
             if ml and (now-mt >= 10):
                 with _lock: _shared["_motor_locked"]=False
 
         with _lock: motor_locked=_shared["_motor_locked"]
+
+        # Main relay — nyala hanya kalau PIR DAN YOLO sama-sama konfirmasi ada orang
+        relay = 1 if (ada_orang and d["gerakan"] and d["saklar"] == 1) else 0
+        mc.publish(TOPIC_SERVO, json.dumps({"status": relay}))
+        with _lock: ak["servo"] = relay
 
         if not motor_locked:
             if d["saklar"] == 0:
@@ -211,9 +217,13 @@ def _loop_camera():
 # API Endpoints
 # =============================================
 
+@app.get("/")
+def serve_dashboard():
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html"))
+
 @app.on_event("startup")
 def startup_event():
-    # Mulai MQTT
+    # Mulai MQTT dengan TLS ke HiveMQ Cloud
     c = mqtt.Client(client_id="smartroom-backend-tekra2026", clean_session=True)
     c.on_connect = _on_connect
     c.on_disconnect = _on_disconnect
@@ -262,4 +272,4 @@ def video_feed():
 # Run Server
 # =============================================
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
