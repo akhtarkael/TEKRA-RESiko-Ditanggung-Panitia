@@ -52,6 +52,7 @@ _shared = {
     "aktuator": {"lampu":0,"motor":0,"servo":0},
     "status": {"mqtt_ok":False},
     "_motor_locked":False, "_motor_timer":0,
+    "_relay_on":False, "_relay_empty_since":None,
     "_waktu_ada_orang":time.time(),
     "_status_ada_orang":False,
     "_yolo_detect":False,
@@ -116,11 +117,14 @@ cap = cv2.VideoCapture()
 # Automation Logic
 # =============================================
 def _loop_otomasi():
+    _last_relay = None
     while True:
         with _lock:
             d  = _shared["sensor"].copy()
             ak = _shared["aktuator"]
-            ada_orang = _shared["_status_ada_orang"]
+            ada_orang        = _shared["_status_ada_orang"]
+            relay_on         = _shared["_relay_on"]
+            relay_empty_since = _shared["_relay_empty_since"]
         mc  = _shared.get("_mqtt_client")
         now = time.time()
         
@@ -143,10 +147,25 @@ def _loop_otomasi():
 
         with _lock: motor_locked=_shared["_motor_locked"]
 
-        # Main relay — nyala hanya kalau PIR DAN YOLO sama-sama konfirmasi ada orang
-        relay = 1 if (ada_orang and d["gerakan"] and d["saklar"] == 1) else 0
-        mc.publish(TOPIC_SERVO, json.dumps({"status": relay}))
-        with _lock: ak["servo"] = relay
+        # Main relay — latch ON saat PIR+YOLO konfirmasi, OFF setelah 15 menit sepi
+        RELAY_TIMEOUT = 600  # 10 menit
+        if ada_orang and d["gerakan"]:
+            relay_on = True
+            relay_empty_since = None
+        elif not ada_orang and not d["gerakan"]:
+            if relay_empty_since is None:
+                relay_empty_since = now
+            elif now - relay_empty_since >= RELAY_TIMEOUT:
+                relay_on = False
+        with _lock:
+            _shared["_relay_on"] = relay_on
+            _shared["_relay_empty_since"] = relay_empty_since
+
+        relay = 1 if (relay_on and d["saklar"] == 1) else 0
+        if relay != _last_relay:
+            mc.publish(TOPIC_SERVO, json.dumps({"status": relay}))
+            with _lock: ak["servo"] = relay
+            _last_relay = relay
 
         if not motor_locked:
             if d["saklar"] == 0:
@@ -177,8 +196,10 @@ def _loop_camera():
             saklar_on = s["saklar"] == 1
             cam_open = _shared["_camera_open"]
 
-        if saklar_on and (s["gerakan"] or cam_open):
-            if not cap.isOpened(): cap.open(ESP_IP_URL)
+        if saklar_on:
+            if not cap.isOpened():
+                cap.open(ESP_IP_URL)
+                time.sleep(0.8)
             if cap.isOpened():
                 ret, frame = cap.read()
                 if ret and frame is not None:

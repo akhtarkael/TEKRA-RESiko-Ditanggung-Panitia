@@ -38,8 +38,8 @@ const int pir2      = 18;
 const int ledPin    = 21;
 const int gasPin    = 33;
 const int ldrPin    = 35;
-const int relayPin  = 27;
-const int motorPin  = 25;
+const int relayPin  = 25;
+const int motorPin  = 27;
 const int buttonPin = 15;
 const int saklarPin = 17;
 
@@ -169,7 +169,7 @@ void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
   pinMode(saklarPin, INPUT_PULLUP);
 
-  digitalWrite(relayPin, HIGH);
+  digitalWrite(relayPin, LOW);
 
   Serial.print("Konek WiFi...");
   WiFi.begin(SSID, WIFI_PASSWORD);
@@ -273,7 +273,7 @@ void TaskEksekusiAktuator(void *pvParameters) {
     portEXIT_CRITICAL(&dataMux);
     digitalWrite(ledPin,   localLampu ? HIGH : LOW);
     digitalWrite(motorPin, localMotor ? HIGH : LOW);
-    digitalWrite(relayPin, localRelay ? LOW : HIGH);
+    digitalWrite(relayPin, localRelay ? HIGH : LOW);
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
