@@ -2,8 +2,8 @@
 #include <WiFi.h>
 
 // WiFi
-const char* ssid = "NamaWifi"; //sesuaikan wifi yang terhubung
-const char* password = "PassWifi"; //sesuaikan password wifi
+const char* ssid = "your-ssid"; //sesuaikan wifi yang terhubung
+const char* password = "your-passwd"; //sesuaikan password wifi
 
 // Pinout AI Thinker
 #define PWDN_GPIO_NUM     32

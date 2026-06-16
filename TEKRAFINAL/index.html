@@ -5,6 +5,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>TEKRA 2026 - System Overview</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
     <style>
@@ -204,7 +205,18 @@
         <div class="max-w-7xl mx-auto flex flex-col gap-4">
             
             <!-- Metrics Grid -->
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                <!-- Temperature -->
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Temperature</span>
+                        <span class="material-symbols-outlined text-[#e53935] text-[20px]">thermometer</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <span id="val-suhu" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                        <span class="text-sm text-secondary">°C</span>
+                    </div>
+                </div>
                 <!-- Humidity -->
                 <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
                     <div class="flex items-center justify-between mb-3">
@@ -300,8 +312,8 @@
                             <div class="flex items-center justify-between mb-4">
                                 <span class="material-symbols-outlined text-on-surface-variant">hvac</span>
                             </div>
-                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Ventilation Servo</span>
-                            <span id="val-servo" class="text-xl font-bold text-on-surface">CLOSED</span>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Main Relay</span>
+                            <span id="val-relay" class="text-xl font-bold text-on-surface">OFF</span>
                         </div>
                     </div>
                 </div>
@@ -316,34 +328,47 @@
                         <span id="cam-status-text">Standby</span>
                     </div>
                     <div class="flex-1 rounded-lg overflow-hidden relative bg-black flex items-center justify-center">
-                        <img id="cam-image" src="http://127.0.0.1:8000/api/video_feed" alt="Camera Feed" class="object-contain w-full h-full" onerror="this.style.display='none'"/>
+                        <img id="cam-image" src="/api/video_feed" alt="Camera Feed" class="object-contain w-full h-full" onerror="this.style.display='none'"/>
                         <span id="cam-fallback" class="text-white text-sm" style="display:none;">Stream is offline</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Power Monitoring Card -->
+            <!-- Power Monitoring Card — PZEM004T -->
             <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col mt-4">
                 <div class="flex items-center justify-between mb-4 border-b border-outline-variant pb-3">
                     <h3 class="text-xl font-bold text-on-surface">Power Consumption Monitoring</h3>
                     <span class="material-symbols-outlined text-primary">bolt</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- ADC Raw Value -->
-                    <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
-                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Sensor ADC Raw Value</span>
-                        <div class="flex items-baseline gap-1 mt-2">
-                            <span id="val-acs-adc" class="text-[36px] font-bold text-on-surface leading-none">0</span>
-                            <span class="text-xs text-secondary font-semibold">Units</span>
+                <!-- 3 PZEM metrics -->
+                <div class="grid grid-cols-3 gap-3 mb-5">
+                    <div class="bg-surface-container flex flex-col p-3 rounded-lg border border-outline-variant/50">
+                        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Tegangan</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="val-tegangan" class="text-xl font-bold text-on-surface">0.0</span>
+                            <span class="text-[10px] text-secondary">V</span>
                         </div>
                     </div>
-                    <!-- Calculated Wattage -->
-                    <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
-                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Calculated Power Load</span>
-                        <div class="flex items-baseline gap-1 mt-2">
-                            <span id="val-acs-watt" class="text-[36px] font-bold text-primary leading-none">0.00</span>
-                            <span class="text-xs text-secondary font-semibold">Watt</span>
+                    <div class="bg-surface-container flex flex-col p-3 rounded-lg border border-outline-variant/50">
+                        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Arus</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="val-arus" class="text-xl font-bold text-on-surface">0.000</span>
+                            <span class="text-[10px] text-secondary">A</span>
                         </div>
+                    </div>
+                    <div class="bg-surface-container flex flex-col p-3 rounded-lg border border-outline-variant/50">
+                        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Energi</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="val-energi" class="text-xl font-bold text-primary">0.000</span>
+                            <span class="text-[10px] text-secondary">kWh</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Chart kWh full-width -->
+                <div class="bg-surface-container rounded-lg border border-outline-variant/50 p-4">
+                    <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Energy Consumption (kWh)</span>
+                    <div class="relative h-[140px] mt-2">
+                        <canvas id="chart-kwh"></canvas>
                     </div>
                 </div>
             </div>
@@ -384,22 +409,23 @@
     // 2. Fetch API Data & Update UI
     async function fetchDashboardData() {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/data');
+            const response = await fetch('/api/data');
             const data = await response.json();
 
             // Sensor utama
+            document.getElementById('val-suhu').innerText     = data.sensor.suhu ?? 0;
             document.getElementById('val-humidity').innerText = data.sensor.kelembapan ?? 0;
             document.getElementById('val-gas').innerText      = data.sensor.gas ?? 0;
             document.getElementById('val-ldr').innerText      = data.sensor.kecerahan ?? 0;
 
-            // ACS712 — guard undefined & NaN
-            const adcVal = data.sensor.adc_acs;
-            document.getElementById('val-acs-adc').innerText =
-                (adcVal !== undefined && adcVal !== null) ? adcVal : '0';
+            // PZEM Power Metrics
+            document.getElementById('val-tegangan').innerText = (parseFloat(data.sensor.tegangan) || 0).toFixed(1);
+            document.getElementById('val-arus').innerText     = (parseFloat(data.sensor.arus)     || 0).toFixed(3);
+            document.getElementById('val-energi').innerText   = (parseFloat(data.sensor.energi)   || 0).toFixed(3);
 
-            const wattVal = parseFloat(data.sensor.daya_watt);
-            document.getElementById('val-acs-watt').innerText =
-                isNaN(wattVal) ? '0.00' : wattVal.toFixed(2);
+            // Update chart
+            const tsLabel = new Date().toLocaleTimeString();
+            pushChart(chartKwh, tsLabel, parseFloat(data.sensor.energi) || 0);
 
             // MQTT status
             const mqttDot  = document.getElementById('mqtt-status-dot');
@@ -436,7 +462,11 @@
             // Actuators
             document.getElementById('val-lampu').innerText = data.aktuator.lampu  ? "ON"      : "OFF";
             document.getElementById('val-motor').innerText = data.aktuator.motor  ? "RUNNING" : "OFF";
-            document.getElementById('val-servo').innerText = data.aktuator.servo === 90 ? "OPEN" : "CLOSED";
+            const relayEl = document.getElementById('val-relay');
+            relayEl.innerText  = data.aktuator.servo ? "ON" : "OFF";
+            relayEl.className  = data.aktuator.servo
+                ? "text-xl font-bold text-primary"
+                : "text-xl font-bold text-on-surface";
 
             // Camera
             const camDot      = document.getElementById('cam-dot');
@@ -501,6 +531,38 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
+
+    // Chart.js helpers
+    const MAX_PTS = 80;
+    function makeChart(id, label, color) {
+        return new Chart(document.getElementById(id).getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{ label, data: [], borderColor: color, backgroundColor: color + '22',
+                             borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: true }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(0,0,0,0.06)' },
+                         ticks: { font: { size: 10 }, maxTicksLimit: 4 } }
+                }
+            }
+        });
+    }
+    function pushChart(chart, label, value) {
+        if (chart.data.labels.length >= MAX_PTS) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+        }
+        chart.data.labels.push(label);
+        chart.data.datasets[0].data.push(value);
+        chart.update('none');
+    }
+    const chartKwh = makeChart('chart-kwh', 'Energi (kWh)', '#10b981');
 
     fetchDashboardData();
     setInterval(fetchDashboardData, 500);
