@@ -84,6 +84,40 @@ Layer ketiga adalah sistem failsafe yang memastikan seluruh perangkat listrik da
 
 ---
 
+## Diagram UML
+
+> Source PlantUML dapat diedit di folder [`diagrams/`](diagrams/).
+
+### Use Case — Interaksi Penghuni, Operator & Tiga Layer Sistem
+
+![Use Case Diagram](diagrams/usecase.png)
+
+---
+
+### Sequence — Deteksi Penghuni & Aktivasi Perangkat
+
+Alur lengkap dari PIR mendeteksi gerakan, Frame Grabber membuka stream ESP32-CAM, YOLO mendeteksi orang, hingga relay dan lampu aktif. Termasuk alur timeout saat ruangan kembali kosong.
+
+![Sequence Occupancy](diagrams/sequence_occupancy.png)
+
+---
+
+### Sequence — Emergency Gas & Kelembaban Kritis
+
+Alur saat `gas_ppm > 2500` atau `kelembapan > 75%`: motor fan dipaksa ON, window servo dibuka, safety hold 10 detik setelah kondisi normal, dan manual emergency lock via dashboard.
+
+![Sequence Emergency](diagrams/sequence_emergency.png)
+
+---
+
+### Activity — Loop Otomasi Backend
+
+Decision tree lengkap `_loop_otomasi` yang berjalan setiap 150ms: emergency fan, logika relay dengan timeout kosong, window servo, hingga kontrol lampu dan motor.
+
+![Activity Otomasi](diagrams/activity_diagram.png)
+
+---
+
 ## Arsitektur Sistem
 
 ```
@@ -144,11 +178,12 @@ Layer ketiga adalah sistem failsafe yang memastikan seluruh perangkat listrik da
 | DHT11            | GPIO 32 | Suhu & kelembaban      |
 | MHQ-135          | GPIO 33 | Kualitas udara         |
 | LDR              | GPIO 35 | Intensitas cahaya      |
-| LED (Lampu)      | GPIO 21 | Simulasi lampu ruangan |
-| Motor DC         | GPIO 25 | Simulasi AC            |
-| Servo            | GPIO 27 | Simulasi ventilasi     |
-| Push Button      | GPIO 15 | Toggle manual motor    |
-| Saklar           | GPIO 17 |
+| LED (Lampu)      | GPIO 21 | Simulasi lampu ruangan      |
+| Relay (Utama)    | GPIO 25 | Pemutus daya utama ruangan  |
+| Motor DC         | GPIO 27 | Simulasi AC                 |
+| Servo (Jendela)  | GPIO 26 | Simulasi ventilasi          |
+| Push Button      | GPIO 15 | Toggle manual motor         |
+| Saklar Global    | GPIO 17 | Mode hemat / mati total     |
 
 ### ESP32-CAM
 - Model: AI Thinker ESP32-CAM
@@ -175,7 +210,7 @@ Layer ketiga adalah sistem failsafe yang memastikan seluruh perangkat listrik da
 
 ### Prasyarat
 ```bash
-pip install paho-mqtt ultralytics streamlit opencv-python
+pip install fastapi uvicorn paho-mqtt ultralytics opencv-python python-dotenv
 ```
 
 ### ESP32 Utama
@@ -188,10 +223,19 @@ pip install paho-mqtt ultralytics streamlit opencv-python
 2. Upload kode ESP32-CAM via Arduino IDE (gunakan FTDI programmer, IO0 di-ground saat upload)
 3. Catat IP yang muncul di Serial Monitor
 
-### Laptop
-1. Ganti `ESP_IP_URL` dengan IP ESP32-CAM
-2. Jalankan kode python
-3. Buka file index.html
+### Backend (Laptop/Server)
+1. Buat file `.env` di folder `TEKRAFINAL/` berisi:
+   ```
+   MQTT_BROKER=broker.hivemq.com
+   MQTT_PORT=1883
+   ```
+2. Ganti `ESP_IP_URL` di `main.py` dengan IP ESP32-CAM dari Serial Monitor
+3. Jalankan backend:
+   ```bash
+   cd TEKRAFINAL
+   python3 main.py
+   ```
+4. Buka browser ke `http://localhost:8000`
 
 ---
 
@@ -202,7 +246,6 @@ pip install paho-mqtt ultralytics streamlit opencv-python
 | Prototipe skala diorama                        | Implementasi di ruang kelas nyata                    |
 | Broker publik HiveMQ                           | Self-hosted MQTT broker (Mosquitto) di server kampus |
 | Satu ruangan per ESP32                         | Jaringan multi-node per gedung                       |
-| Pembacaan energi yang belum diimplementasikan  | Memakai PZEM-004T untuk pembacaan energi             |
 | Laptop sebagai server processing               | Raspberry Pi atau edge server dedicated              |
 | Dashboard masih lokal dan file statis          | Deployment ke webserver terpusat                     |
 

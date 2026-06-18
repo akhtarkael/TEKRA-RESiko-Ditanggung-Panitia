@@ -1,0 +1,76 @@
+@startuml sequence_occupancy
+title HYDRA — Sequence: Deteksi Penghuni & Aktivasi Perangkat
+
+skinparam sequenceArrowThickness 1.5
+skinparam participantBackgroundColor #f0f4ff
+
+participant "Penghuni" as P
+participant "ESP32\nUtama" as ESP
+participant "MQTT\nBroker\n(HiveMQ)" as MQTT
+participant "Backend\n(FastAPI)" as BE
+participant "Frame\nGrabber\nThread" as FG
+participant "Camera\nYOLO\nThread" as CY
+participant "ESP32-CAM" as CAM
+
+== Penghuni memasuki ruangan ==
+
+P -> ESP : gerak terdeteksi oleh PIR
+
+activate ESP
+ESP -> MQTT : publish "esp32/sensor"\n{gerakan:1, saklar:1, gas:..., kelembapan:..., ...}
+deactivate ESP
+
+MQTT -> BE : on_message(sensor payload)
+
+activate BE
+BE -> BE : EMA smoothing gas & LDR\nadc_to_co2_ppm(), adc_to_lux()\n_shared["gerakan"] = 1
+deactivate BE
+
+== Backend mengaktifkan kamera ==
+
+note over BE, FG : _frame_grabber thread terus jalan,\nbuka koneksi ke ESP32-CAM saat\nshould_grab = True
+
+BE -> FG : should_grab = saklar_on AND (gerakan OR cam_open)
+activate FG
+FG -> CAM : HTTP GET http://ESP_CAM_IP/ (MJPEG stream)
+activate CAM
+CAM --> FG : JPEG frame 320×240 (QVGA)
+FG -> FG : _latest_raw_frame = frame
+deactivate CAM
+deactivate FG
+
+== YOLO mendeteksi orang ==
+
+activate CY
+CY -> CY : active = saklar_on AND (gerakan OR ada_orang)\n_camera_open = True (segera, sebelum frame pertama)
+CY -> CY : resize frame → 640×480\nmodel(frame, classes=[0], conf=0.5)
+CY -> CY : len(boxes) > 0 → True\n_status_ada_orang = True\n_waktu_ada_orang = now
+deactivate CY
+
+== Otomasi relay & lampu ==
+
+activate BE
+BE -> BE : _loop_otomasi:\nada_orang = True → relay_on = True
+BE -> MQTT : publish "cmd/servo" {status:1} retain=True
+BE -> MQTT : publish "cmd/lampu" {status:1}
+deactivate BE
+
+MQTT -> ESP : cmd/servo {status:1}
+MQTT -> ESP : cmd/lampu {status:1}
+
+activate ESP
+ESP -> ESP : TaskEksekusiAktuator:\ncmdRelay = 1 → relayPin HIGH\ncmdLampu = 1 → ledPin HIGH
+deactivate ESP
+
+== Penghuni keluar, ruangan kosong ==
+
+note over BE : Tidak ada gerakan, YOLO tidak deteksi orang\n_status_ada_orang = False setelah TIMEOUT_KOSONG (30s)
+
+BE -> BE : relay_empty_since = now\nsetelah RELAY_TIMEOUT (30s):\nrelay_on = False
+
+BE -> MQTT : publish "cmd/servo" {status:0} retain=True
+BE -> MQTT : publish "cmd/lampu" {status:0}
+MQTT -> ESP : cmd/servo, cmd/lampu
+ESP -> ESP : Relay OFF, Lampu OFF
+
+@enduml

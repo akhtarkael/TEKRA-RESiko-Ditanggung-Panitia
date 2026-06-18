@@ -7,23 +7,22 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <ESP32Servo.h>
 
-// =============================================
-// Konfig Wifi dan MQTT
-// =============================================
-const char* SSID          = "your-ssid"; //sesuaikan nama wifi yang dipakai
-const char* WIFI_PASSWORD = "your-passwd"; //sesuaikan password wifi yang dipakai
+// WiFi & MQTT
+const char* SSID          = "YOUR_WIFI_SSID"; //sesuaikan nama wifi yang dipakai
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD"; //sesuaikan password wifi yang dipakai
 const char* MQTT_BROKER   = "broker.hivemq.com";
 const int   MQTT_PORT     = 1883;
 
 const char* TOPIC_SENSOR    = "tekra2026/RESikoDitanggungPanitia/esp32/sensor";
 const char* TOPIC_CMD_LAMPU = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/lampu";
 const char* TOPIC_CMD_MOTOR = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/motor";
-const char* TOPIC_CMD_SERVO = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/servo";
+const char* TOPIC_CMD_SERVO   = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/servo";
+const char* TOPIC_CMD_WINDOW      = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/window";
+const char* TOPIC_CMD_RESET_PZEM  = "tekra2026/RESikoDitanggungPanitia/esp32/cmd/reset_pzem";
 
-// =============================================
 // Pinout
-// =============================================
 #define DHTPIN     32
 #define DHTTYPE    DHT11
 #define PZEM_RX    16
@@ -40,21 +39,18 @@ const int gasPin    = 33;
 const int ldrPin    = 35;
 const int relayPin  = 25;
 const int motorPin  = 27;
+const int servoPin  = 26;
 const int buttonPin = 15;
 const int saklarPin = 17;
 
-// =============================================
 // Objek
-// =============================================
 DHT dht(DHTPIN, DHTTYPE);
+Servo windowServo;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 PZEM004Tv30* pzem = nullptr;
 Adafruit_SSD1306 display(OLED_W, OLED_H, &Wire, -1);
 
-// =============================================
-// Struct dari data
-// =============================================
 struct DataSensor {
   int kelembapan;
   int suhu;
@@ -74,9 +70,11 @@ struct DataSensor {
 
 DataSensor dataSistemShared = {0, 0, 0, 0, 0, 0, 0, 1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-volatile int   cmdLampu = 0;
-volatile int   cmdMotor = 0;
-volatile int   cmdRelay = 0;
+volatile int   cmdLampu  = 0;
+volatile int   cmdMotor  = 0;
+volatile int   cmdRelay  = 0;
+volatile int   cmdWindow    = 0;    // 0 = tutup (120°), 1 = buka (0°)
+volatile bool  cmdResetPzem = false;
 
 volatile bool motorToggleState   = false;
 volatile unsigned long lastDebounceTime = 0;
@@ -88,9 +86,7 @@ portMUX_TYPE dataMux  = portMUX_INITIALIZER_UNLOCKED;
 volatile bool _mqttOk = false;
 SemaphoreHandle_t _mqttMutex = NULL;
 
-// =============================================
-// Deklarasi Task buat RTOS
-// =============================================
+// Deklarasi task FreeRTOS
 void TaskBacaSensor(void *pvParameters);
 void TaskEksekusiAktuator(void *pvParameters);
 void TaskPublishSensor(void *pvParameters);
@@ -98,9 +94,6 @@ void TaskMQTTLoop(void *pvParameters);
 void TaskSerialLog(void *pvParameters);
 void TaskOLED(void *pvParameters);
 
-// =============================================
-// ISR button
-// =============================================
 void IRAM_ATTR buttonISR() {
   unsigned long currentTime = millis();
   if ((currentTime - lastDebounceTime) > debounceDelay) {
@@ -113,9 +106,6 @@ void IRAM_ATTR buttonISR() {
   }
 }
 
-// =============================================
-// MQTT Callback
-// =============================================
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String topicStr = String(topic);
   StaticJsonDocument<64> doc;
@@ -136,11 +126,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     cmdRelay = doc["status"];
     portEXIT_CRITICAL(&dataMux);
   }
+  else if (topicStr == TOPIC_CMD_WINDOW) {
+    portENTER_CRITICAL(&dataMux);
+    cmdWindow = doc["status"];
+    portEXIT_CRITICAL(&dataMux);
+  }
+  else if (topicStr == String(TOPIC_CMD_RESET_PZEM)) {
+    portENTER_CRITICAL(&dataMux);
+    cmdResetPzem = true;
+    portEXIT_CRITICAL(&dataMux);
+  }
 }
 
-// =============================================
-// Setup
-// =============================================
 void setup() {
   Serial.begin(115200);
   pzem = new PZEM004Tv30(Serial2, PZEM_RX, PZEM_TX);
@@ -170,6 +167,8 @@ void setup() {
   pinMode(saklarPin, INPUT_PULLUP);
 
   digitalWrite(relayPin, LOW);
+  windowServo.attach(servoPin);
+  windowServo.write(120); // default tutup (fisik: 120° = posisi jendela tertutup)
 
   Serial.print("Konek WiFi...");
   WiFi.begin(SSID, WIFI_PASSWORD);
@@ -196,7 +195,7 @@ void setup() {
   _mqttMutex = xSemaphoreCreateMutex();
 
   xTaskCreate(TaskBacaSensor,       "BacaSensor", 8192, NULL, 2, NULL);
-  xTaskCreate(TaskEksekusiAktuator, "Aktuator",   2048, NULL, 2, NULL);
+  xTaskCreate(TaskEksekusiAktuator, "Aktuator",   4096, NULL, 2, NULL);
   xTaskCreate(TaskPublishSensor,    "Publish",    6144, NULL, 1, NULL);
   xTaskCreate(TaskMQTTLoop,         "MQTTLoop",   8192, NULL, 1, NULL);
   xTaskCreate(TaskSerialLog,        "SerialLog",  4096, NULL, 1, NULL);
@@ -207,19 +206,35 @@ void loop() {
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
-// =============================================
-// Task: Baca Sensor dan Saklar Global
-// =============================================
 void TaskBacaSensor(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
+  static int dhtTick = 0;
   for (;;) {
     esp_task_wdt_reset();
+
+    // Reset PZEM energy counter jika diminta (via MQTT / dashboard)
+    bool doReset = false;
+    portENTER_CRITICAL(&dataMux);
+    if (cmdResetPzem) { doReset = true; cmdResetPzem = false; }
+    portEXIT_CRITICAL(&dataMux);
+    if (doReset) {
+      pzem->resetEnergy();
+      Serial.println("[PZEM] Energy counter di-reset!");
+    }
+
+    // DHT11 min 1s per baca; task 250ms — baca tiap 4 iterasi
+    dhtTick++;
+    float hum = NAN, temp = NAN;
+    if (dhtTick >= 4) {
+      dhtTick = 0;
+      hum  = dht.readHumidity();
+      temp = dht.readTemperature();
+    }
+
     int gas   = analogRead(gasPin);
     int ldr   = analogRead(ldrPin);
     int pir   = digitalRead(pir1) || digitalRead(pir2);
-    float hum  = dht.readHumidity();
-    float temp = dht.readTemperature();
 
     int saklarStatus = (digitalRead(saklarPin) == LOW) ? 1 : 0;
 
@@ -242,45 +257,43 @@ void TaskBacaSensor(void *pvParameters) {
     if (!isnan(temp) && temp > -40.0f && temp < 80.0f) dataSistemShared.suhu = (int)temp;
     if (pzemOk) {
       dataSistemShared.tegangan = pzemV;
+      if (!isnan(pzemA)   && !isinf(pzemA)   && pzemA   >= 0.0f   && pzemA   <= 100.0f)   dataSistemShared.arus        = pzemA;
+      if (!isnan(pzemW)   && !isinf(pzemW)   && pzemW   >= 0.0f   && pzemW   <= 23000.0f) dataSistemShared.daya        = pzemW;
+      if (!isnan(pzemKwh) && !isinf(pzemKwh) && pzemKwh >= 0.0f   && pzemKwh <= 9999.999f) dataSistemShared.energi    = pzemKwh;
+      if (!isnan(pzemHz)  && !isinf(pzemHz)  && pzemHz  > 40.0f   && pzemHz  < 70.0f)     dataSistemShared.frekuensi  = pzemHz;
+      if (!isnan(pzemPF)  && !isinf(pzemPF)  && pzemPF  >= 0.0f   && pzemPF  <= 1.0f)     dataSistemShared.powerFactor = pzemPF;
     } else {
       dataSistemShared.tegangan    = 0.0f;
       dataSistemShared.arus        = 0.0f;
       dataSistemShared.daya        = 0.0f;
+      dataSistemShared.frekuensi   = 0.0f;
+      dataSistemShared.powerFactor = 0.0f;
     }
-    if (!isnan(pzemA)   && !isinf(pzemA)   && pzemA   >= 0.0f   && pzemA   <= 100.0f)   dataSistemShared.arus        = pzemA;
-    if (!isnan(pzemW)   && !isinf(pzemW)   && pzemW   >= 0.0f   && pzemW   <= 23000.0f) dataSistemShared.daya        = pzemW;
-    if (!isnan(pzemKwh) && !isinf(pzemKwh) && pzemKwh >= 0.0f   && pzemKwh <= 9999.999f) dataSistemShared.energi    = pzemKwh;
-    if (!isnan(pzemHz)  && !isinf(pzemHz)  && pzemHz  > 40.0f   && pzemHz  < 70.0f)     dataSistemShared.frekuensi  = pzemHz;
-    if (!isnan(pzemPF)  && !isinf(pzemPF)  && pzemPF  >= 0.0f   && pzemPF  <= 1.0f)     dataSistemShared.powerFactor = pzemPF;
     portEXIT_CRITICAL(&dataMux);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
   }
 }
 
-// =============================================
-// Task: Aktuator
-// =============================================
 void TaskEksekusiAktuator(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
   for (;;) {
     esp_task_wdt_reset();
-    int localLampu, localMotor, localRelay;
+    int localLampu, localMotor, localRelay, localWindow;
     portENTER_CRITICAL(&dataMux);
-    localLampu = cmdLampu;
-    localMotor = cmdMotor;
-    localRelay = cmdRelay;
+    localLampu  = cmdLampu;
+    localMotor  = cmdMotor;
+    localRelay  = cmdRelay;
+    localWindow = cmdWindow;
     portEXIT_CRITICAL(&dataMux);
     digitalWrite(ledPin,   localLampu ? HIGH : LOW);
     digitalWrite(motorPin, localMotor ? HIGH : LOW);
     digitalWrite(relayPin, localRelay ? HIGH : LOW);
+    windowServo.write(localWindow ? 0 : 120); // 0° = buka, 120° = tutup (sesuai pemasangan fisik)
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
-// =============================================
-// Task: Publish Sensor
-// =============================================
 void TaskPublishSensor(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
@@ -322,9 +335,6 @@ void TaskPublishSensor(void *pvParameters) {
   }
 }
 
-// =============================================
-// Task: Loop MQTT dan Reconnecting
-// =============================================
 void TaskMQTTLoop(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
@@ -348,6 +358,8 @@ void TaskMQTTLoop(void *pvParameters) {
           mqttClient.subscribe(TOPIC_CMD_LAMPU);
           mqttClient.subscribe(TOPIC_CMD_MOTOR);
           mqttClient.subscribe(TOPIC_CMD_SERVO);
+          mqttClient.subscribe(TOPIC_CMD_WINDOW);
+          mqttClient.subscribe(TOPIC_CMD_RESET_PZEM);
         }
         xSemaphoreGive(_mqttMutex);
       }
@@ -368,9 +380,6 @@ void TaskMQTTLoop(void *pvParameters) {
   }
 }
 
-// =============================================
-// Task: Serial Log
-// =============================================
 void TaskSerialLog(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
@@ -402,21 +411,18 @@ void TaskSerialLog(void *pvParameters) {
     Serial.print("  [PZEM]   Power Factor: "); Serial.println(d.powerFactor, 2);
     Serial.print("  [CMD]    Lampu       : "); Serial.println(cmdLampu ? "NYALA" : "MATI");
     Serial.print("  [CMD]    Motor       : "); Serial.println(cmdMotor ? "NYALA" : "MATI");
-    Serial.print("  [CMD]    Main Relay  : "); Serial.println(cmdRelay ? "ON" : "OFF");
-    Serial.print("  [BTN]    Toggle Motor: "); Serial.println(toggleCopy ? "ON" : "OFF");
+    Serial.print("  [CMD]    Main Relay  : "); Serial.println(cmdRelay  ? "ON"    : "OFF");
+    Serial.print("  [CMD]    Window Servo: "); Serial.println(cmdWindow ? "BUKA"  : "TUTUP");
+    Serial.print("  [BTN]    Toggle Motor: "); Serial.println(toggleCopy ? "ON"   : "OFF");
     Serial.println("=====================================");
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
 
-// =============================================
-// Task: OLED Display
-// =============================================
 void TaskOLED(void *pvParameters) {
   (void) pvParameters;
   esp_task_wdt_add(NULL);
 
-  // Splash screen HYDRA
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
   display.setTextSize(2);

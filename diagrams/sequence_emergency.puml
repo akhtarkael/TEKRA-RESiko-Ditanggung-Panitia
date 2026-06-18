@@ -1,0 +1,69 @@
+@startuml sequence_emergency
+title HYDRA — Sequence: Emergency Gas & Kelembaban Kritis
+
+skinparam sequenceArrowThickness 1.5
+
+participant "MQ-135\n/ DHT11" as Sensor
+participant "ESP32\nUtama" as ESP
+participant "MQTT\nBroker" as MQTT
+participant "Backend\n(FastAPI)" as BE
+participant "Operator\n(Dashboard)" as Op
+
+== Kondisi udara memburuk ==
+
+Sensor -> ESP : gas ADC meningkat / kelembapan naik
+activate ESP
+ESP -> MQTT : publish "esp32/sensor"\n{gas: <high_adc>, kelembapan: <high>}
+deactivate ESP
+
+MQTT -> BE : on_message(sensor)
+activate BE
+BE -> BE : _adc_to_co2_ppm(gas_adc) > GAS_EMERG_PPM (2500)\nATAU kelembapan > 75%
+
+== Emergency: paksa motor ON & jendela BUKA ==
+
+BE -> MQTT : publish "cmd/motor" {status:1}
+note right of BE : Motor fan dipaksa ON\nterlepas dari relay_on / ada_orang
+
+BE -> MQTT : publish "cmd/window" {status:1} retain=True
+note right of BE : Window servo → 0° (buka)
+
+BE -> BE : _motor_locked = True\n_motor_timer = now\nlog "EMERGENCY — Gas critical: X ppm"
+deactivate BE
+
+MQTT -> ESP : cmd/motor {status:1}
+MQTT -> ESP : cmd/window {status:1}
+activate ESP
+ESP -> ESP : motorPin HIGH (fan ON)\nwindowServo.write(0) — buka
+deactivate ESP
+
+== Dashboard notifikasi operator ==
+
+BE -> Op : log entry dengan level "alert"\nmuncul di Activity Log dashboard
+
+== Kondisi kembali normal ==
+
+note over Sensor, BE : gas_ppm turun < 2500\nkelembapan < 75%
+
+BE -> BE : motor_locked masih True\n(safety hold 10 detik setelah\nkondisi kembali normal)
+
+...10 detik...
+
+BE -> BE : motor_locked = False\nmotor dikembalikan ke logika normal
+
+note over BE : Window servo akan tutup otomatis\nsaat gas_ppm < GAS_CLOSE_PPM (600)\nDAN kelembapan < HUM_CLOSE (50%)
+
+BE -> MQTT : publish "cmd/window" {status:0} retain=True
+MQTT -> ESP : cmd/window {status:0}
+ESP -> ESP : windowServo.write(120) — tutup
+
+== Manual emergency lock via dashboard ==
+
+Op -> BE : POST /api/emergency_shutdown
+activate BE
+BE -> BE : _emergency = True\nrelay_on = False\ncmdServo = 0
+BE -> MQTT : publish "cmd/servo" {status:0} retain=True
+note right of BE : Seluruh relay utama dimatikan\nmotor tetap bisa jalan via motor_locked
+deactivate BE
+
+@enduml

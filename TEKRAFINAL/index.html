@@ -159,7 +159,7 @@
     </div>
 
     <div class="mt-auto px-6 pt-4 flex flex-col gap-4">
-        <button class="w-full bg-error text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+        <button id="btn-emergency-sidebar" onclick="emergencyShutdown()" class="w-full bg-error text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
             <span class="material-symbols-outlined text-[18px]">warning</span>
             Emergency Shutdown
         </button>
@@ -167,6 +167,11 @@
 </nav>
 
 <!-- Modal: Not Connected -->
+<div id="banner-emergency" class="fixed top-0 left-[260px] right-0 z-[90] hidden items-center justify-center gap-3 bg-[#b71c1c] text-white px-6 py-2 font-bold text-sm tracking-wider">
+    <span class="material-symbols-outlined animate-pulse" style="font-size:18px">warning</span>
+    EMERGENCY LOCK AKTIF — Relay diblokir. PIR &amp; YOLO tidak mengontrol relay.
+    <span class="material-symbols-outlined animate-pulse" style="font-size:18px">warning</span>
+</div>
 <div id="modal-not-connected" class="fixed inset-0 z-[100] flex items-center justify-center hidden">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal()"></div>
     <div class="relative bg-[#2e3132] border border-outline-variant rounded-2xl p-6 w-[320px] shadow-2xl flex flex-col items-center gap-4">
@@ -231,12 +236,14 @@
                 <!-- Gas Level -->
                 <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Gas Level</span>
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">CO₂ Equiv.</span>
                         <span class="material-symbols-outlined text-[#b91a24] text-[20px]">air</span>
                     </div>
                     <div class="flex items-baseline gap-1">
-                        <span id="val-gas" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                        <span id="val-gas" class="text-[40px] font-bold text-on-surface leading-tight">400</span>
+                        <span class="text-sm text-on-surface-variant font-semibold">ppm</span>
                     </div>
+                    <div id="gas-quality" class="text-[11px] mt-1 font-semibold text-primary">Good</div>
                 </div>
                 <!-- Luminance -->
                 <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 card-hover">
@@ -245,7 +252,8 @@
                         <span class="material-symbols-outlined text-primary text-[20px]">light_mode</span>
                     </div>
                     <div class="flex items-baseline gap-1">
-                        <span id="val-ldr" class="text-[48px] font-bold text-on-surface leading-tight">0</span>
+                        <span id="val-ldr" class="text-[40px] font-bold text-on-surface leading-tight">--</span>
+                        <span class="text-sm text-on-surface-variant font-semibold">lux</span>
                     </div>
                 </div>
                 <!-- PIR -->
@@ -290,30 +298,51 @@
                     <div class="flex items-center justify-between mb-6 border-b border-outline-variant pb-4">
                         <h3 class="text-xl font-bold text-on-surface">Actuator Status</h3>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1">
                         <!-- Lighting -->
                         <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
-                            <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center justify-between mb-2">
                                 <span class="material-symbols-outlined text-on-surface-variant">lightbulb</span>
                             </div>
-                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Main Lighting</span>
-                            <span id="val-lampu" class="text-xl font-bold text-on-surface">OFF</span>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Main Lighting</span>
+                            <span id="val-lampu" class="text-xl font-bold text-on-surface mt-1">OFF</span>
+                            <span class="block min-h-[14px]"></span>
                         </div>
                         <!-- Fan -->
                         <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
-                            <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center justify-between mb-2">
                                 <span class="material-symbols-outlined text-on-surface-variant">mode_fan</span>
                             </div>
-                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Ceiling Fan / Motor</span>
-                            <span id="val-motor" class="text-xl font-bold text-on-surface">OFF</span>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Ceiling Fan / Motor</span>
+                            <span id="val-motor" class="text-xl font-bold text-on-surface mt-1">OFF</span>
+                            <span class="block min-h-[14px]"></span>
                         </div>
-                        <!-- Ventilation -->
+                        <!-- Window Servo -->
                         <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="material-symbols-outlined text-on-surface-variant">hvac</span>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="material-symbols-outlined text-on-surface-variant">window</span>
                             </div>
-                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-auto">Main Relay</span>
-                            <span id="val-relay" class="text-xl font-bold text-on-surface">OFF</span>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Window Servo</span>
+                            <span id="val-window" class="text-xl font-bold text-on-surface mt-1">TUTUP</span>
+                            <span class="block min-h-[14px]"></span>
+                        </div>
+                        <!-- Main Relay -->
+                        <div class="bg-surface-container flex flex-col p-4 rounded-lg border border-outline-variant/50">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="material-symbols-outlined text-on-surface-variant">power</span>
+                            </div>
+                            <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Main Relay</span>
+                            <span id="val-relay" class="text-xl font-bold text-on-surface mt-1">OFF</span>
+                            <span id="val-relay-countdown" class="text-[10px] text-on-surface-variant mt-1 block min-h-[14px]"></span>
+                            <button id="btn-emergency"
+                                onclick="emergencyShutdown()"
+                                disabled
+                                class="mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all
+                                       bg-surface-container-high text-on-surface-variant cursor-not-allowed opacity-40"
+                            >
+                                <span class="material-symbols-outlined text-sm" style="font-size:14px">power_off</span>
+                                EMERGENCY OFF
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -324,12 +353,13 @@
                         <div id="cam-dot" class="w-2 h-2 rounded-full bg-error"></div>
                         <span class="text-xs font-bold tracking-wider text-white">ESP-CAM</span>
                     </div>
-                    <div class="absolute top-4 right-4 z-10 flex items-center gap-2 px-2 py-1 rounded bg-primary/20 backdrop-blur border border-primary/50 text-primary-fixed text-xs font-bold">
+                    <div class="absolute top-4 right-4 z-10 flex items-center gap-3 px-2 py-1 rounded bg-primary/20 backdrop-blur border border-primary/50 text-primary-fixed text-xs font-bold">
+                        <span id="cam-fps" class="font-mono text-[#6ffbbe]">-- FPS</span>
                         <span id="cam-status-text">Standby</span>
                     </div>
                     <div class="flex-1 rounded-lg overflow-hidden relative bg-black flex items-center justify-center">
-                        <img id="cam-image" src="/api/video_feed" alt="Camera Feed" class="object-contain w-full h-full" onerror="this.style.display='none'"/>
-                        <span id="cam-fallback" class="text-white text-sm" style="display:none;">Stream is offline</span>
+                        <img id="cam-image" src="/api/video_feed" alt="Camera Feed" class="object-contain w-full h-full"/>
+                        <div id="cam-fallback" class="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-sm">Stream offline — menunggu gerakan...</div>
                     </div>
                 </div>
             </div>
@@ -338,7 +368,13 @@
             <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col mt-4">
                 <div class="flex items-center justify-between mb-4 border-b border-outline-variant pb-3">
                     <h3 class="text-xl font-bold text-on-surface">Power Consumption Monitoring</h3>
-                    <span class="material-symbols-outlined text-primary">bolt</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="resetPzem()" class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-secondary border border-outline-variant rounded-lg hover:bg-surface-container transition-colors">
+                            <span class="material-symbols-outlined" style="font-size:14px">restart_alt</span>
+                            Reset kWh
+                        </button>
+                        <span class="material-symbols-outlined text-primary">bolt</span>
+                    </div>
                 </div>
                 <!-- 3 PZEM metrics -->
                 <div class="grid grid-cols-3 gap-3 mb-5">
@@ -415,8 +451,16 @@
             // Sensor utama
             document.getElementById('val-suhu').innerText     = data.sensor.suhu ?? 0;
             document.getElementById('val-humidity').innerText = data.sensor.kelembapan ?? 0;
-            document.getElementById('val-gas').innerText      = data.sensor.gas ?? 0;
-            document.getElementById('val-ldr').innerText      = data.sensor.kecerahan ?? 0;
+            const gasPpm = data.sensor.gas_ppm ?? 400;
+            document.getElementById('val-gas').innerText = Math.round(gasPpm);
+            const gasQualEl = document.getElementById('gas-quality');
+            if (gasPpm < 600)       { gasQualEl.innerText = 'Good'; gasQualEl.style.color = '#006c49'; }
+            else if (gasPpm < 1000) { gasQualEl.innerText = 'Moderate'; gasQualEl.style.color = '#d97706'; }
+            else if (gasPpm < 2000) { gasQualEl.innerText = 'Poor — Ventilate'; gasQualEl.style.color = '#dc2626'; }
+            else                    { gasQualEl.innerText = 'Dangerous!'; gasQualEl.style.color = '#7f1d1d'; }
+
+            const luxVal = data.sensor.kecerahan_lux ?? 0;
+            document.getElementById('val-ldr').innerText = luxVal < 10 ? luxVal.toFixed(1) : Math.round(luxVal);
 
             // PZEM Power Metrics
             document.getElementById('val-tegangan').innerText = (parseFloat(data.sensor.tegangan) || 0).toFixed(1);
@@ -460,29 +504,88 @@
                 : "px-3 py-1 bg-surface-container text-secondary rounded-full text-sm font-semibold flex items-center gap-2 w-max";
 
             // Actuators
-            document.getElementById('val-lampu').innerText = data.aktuator.lampu  ? "ON"      : "OFF";
-            document.getElementById('val-motor').innerText = data.aktuator.motor  ? "RUNNING" : "OFF";
+            const lampuEl = document.getElementById('val-lampu');
+            lampuEl.innerText  = data.aktuator.lampu ? "ON" : "OFF";
+            lampuEl.className  = data.aktuator.lampu
+                ? "text-xl font-bold text-primary mt-1"
+                : "text-xl font-bold text-on-surface mt-1";
+            const motorEl = document.getElementById('val-motor');
+            motorEl.innerText  = data.aktuator.motor ? "RUNNING" : "OFF";
+            motorEl.className  = data.aktuator.motor
+                ? "text-xl font-bold text-primary mt-1"
+                : "text-xl font-bold text-on-surface mt-1";
+            const windowEl = document.getElementById('val-window');
+            windowEl.innerText = data.aktuator.window ? "BUKA" : "TUTUP";
+            windowEl.className = data.aktuator.window
+                ? "text-xl font-bold text-primary mt-1"
+                : "text-xl font-bold text-on-surface mt-1";
             const relayEl = document.getElementById('val-relay');
             relayEl.innerText  = data.aktuator.servo ? "ON" : "OFF";
             relayEl.className  = data.aktuator.servo
-                ? "text-xl font-bold text-primary"
-                : "text-xl font-bold text-on-surface";
+                ? "text-xl font-bold text-primary mt-1"
+                : "text-xl font-bold text-on-surface mt-1";
+            const btnEmg   = document.getElementById('btn-emergency');
+            const bannerEmg = document.getElementById('banner-emergency');
+            if (data.emergency) {
+                bannerEmg.style.display = "flex";
+                btnEmg.disabled = false;
+                btnEmg.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">lock_open</span> RELEASE LOCK';
+                btnEmg.className = "mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all bg-[#e65100] hover:bg-[#ff6d00] text-white cursor-pointer animate-pulse";
+            } else if (data.aktuator.servo) {
+                bannerEmg.style.display = "none";
+                btnEmg.disabled = false;
+                btnEmg.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">power_off</span> EMERGENCY OFF';
+                btnEmg.className = "mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all bg-[#b71c1c] hover:bg-[#e53935] text-white cursor-pointer";
+            } else {
+                bannerEmg.style.display = "none";
+                btnEmg.disabled = true;
+                btnEmg.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">power_off</span> EMERGENCY OFF';
+                btnEmg.className = "mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all bg-surface-container-high text-on-surface-variant cursor-not-allowed opacity-40";
+            }
+            // Sidebar emergency button sync
+            const sideBtn = document.getElementById('btn-emergency-sidebar');
+            if (data.emergency) {
+                sideBtn.className = "w-full bg-[#e65100] text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity animate-pulse";
+                sideBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">lock_open</span> Release Lock';
+            } else {
+                sideBtn.className = "w-full bg-error text-white text-sm font-semibold py-3 px-5 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity";
+                sideBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">warning</span> Emergency Shutdown';
+            }
 
-            // Camera
+            const cdEl = document.getElementById('val-relay-countdown');
+            if (data.relay_info && data.relay_info.active) {
+                if (data.relay_info.time_until_off !== null) {
+                    const s = data.relay_info.time_until_off;
+                    const m = Math.floor(s / 60), sec = s % 60;
+                    cdEl.innerText = `Mati dalam ${m}m ${sec}s`;
+                    cdEl.className = "text-[10px] text-[#e53935] mt-1 font-semibold";
+                } else {
+                    cdEl.innerText = "Orang terdeteksi";
+                    cdEl.className = "text-[10px] text-primary mt-1";
+                }
+            } else {
+                cdEl.innerText = "";
+            }
+
+            // Camera overlay — debounce 2 detik supaya satu dropped frame tidak trigger flicker
             const camDot      = document.getElementById('cam-dot');
             const camText     = document.getElementById('cam-status-text');
-            const camImg      = document.getElementById('cam-image');
             const camFallback = document.getElementById('cam-fallback');
+            const camFpsEl    = document.getElementById('cam-fps');
             if (data.system.camera_open) {
-                camDot.className   = "w-2 h-2 rounded-full bg-[#6ffbbe] animate-pulse";
-                camText.innerText  = "Streaming";
-                camImg.style.display      = "block";
+                window._camOfflineSince = null;
+                camDot.className          = "w-2 h-2 rounded-full bg-[#6ffbbe] animate-pulse";
+                camText.innerText         = "Streaming";
                 camFallback.style.display = "none";
+                camFpsEl.innerText        = data.system.fps ? `${data.system.fps} FPS` : '-- FPS';
             } else {
-                camDot.className   = "w-2 h-2 rounded-full bg-secondary";
-                camText.innerText  = "Standby";
-                camImg.style.display      = "none";
-                camFallback.style.display = "block";
+                if (!window._camOfflineSince) window._camOfflineSince = Date.now();
+                if (Date.now() - window._camOfflineSince > 5000) {
+                    camDot.className          = "w-2 h-2 rounded-full bg-secondary";
+                    camText.innerText         = "Standby";
+                    camFallback.style.display = "flex";
+                    camFpsEl.innerText        = "-- FPS";
+                }
             }
 
             // Activity Log
@@ -563,6 +666,54 @@
         chart.update('none');
     }
     const chartKwh = makeChart('chart-kwh', 'Energi (kWh)', '#10b981');
+
+    async function emergencyShutdown() {
+        const btn = document.getElementById('btn-emergency');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">hourglass_empty</span> Mengirim...';
+        try {
+            const res  = await fetch('/api/emergency_shutdown', { method: 'POST' });
+            const data = await res.json();
+            if (data.ok && data.emergency) {
+                // Aktifkan — reset relay display langsung tanpa tunggu poll
+                document.getElementById('val-relay-countdown').innerText = "";
+                document.getElementById('val-relay').innerText = "OFF";
+                document.getElementById('val-relay').className = "text-xl font-bold text-on-surface mt-1";
+            } else if (data.ok && !data.emergency) {
+                // Deaktivasi — kembalikan btn ke greyed-out (relay masih OFF)
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">power_off</span> EMERGENCY OFF';
+                btn.className = "mt-3 w-full flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all bg-surface-container-high text-on-surface-variant cursor-not-allowed opacity-40";
+            }
+            // Polling berikutnya update semua state
+        } catch(e) {
+            console.error('Emergency error:', e);
+            btn.disabled = false;
+        }
+    }
+
+    async function resetPzem() {
+        try {
+            const res = await fetch('/api/reset_pzem', { method: 'POST' });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('val-energi').innerText = '0.000';
+            }
+        } catch(e) {
+            console.error('Reset PZEM error:', e);
+        }
+    }
+
+    // Sembunyikan overlay stream-offline segera saat frame MJPEG pertama tiba,
+    // tanpa tunggu polling interval 500ms
+    document.getElementById('cam-image').addEventListener('load', function() {
+        const fallback = document.getElementById('cam-fallback');
+        if (fallback.style.display !== 'none') {
+            fallback.style.display = 'none';
+            document.getElementById('cam-dot').className = 'w-2 h-2 rounded-full bg-[#6ffbbe] animate-pulse';
+            document.getElementById('cam-status-text').innerText = 'Streaming';
+        }
+    });
 
     fetchDashboardData();
     setInterval(fetchDashboardData, 500);

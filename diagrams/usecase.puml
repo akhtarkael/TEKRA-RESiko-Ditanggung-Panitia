@@ -1,0 +1,52 @@
+@startuml usecase_hydra
+title HYDRA — Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Penghuni\nRuangan" as Penghuni
+actor "Operator\n(Dashboard)" as Operator
+
+rectangle "HYDRA System" {
+
+    package "Layer 1 — Environment Monitoring" {
+        usecase "Baca Sensor\n(Suhu, Hum, Gas, LDR)" as UC_SENSOR
+        usecase "Kontrol Ventilasi\nOtomatis (Window Servo)" as UC_WINDOW
+    }
+
+    package "Layer 2 — AI Occupancy Detection" {
+        usecase "Deteksi Gerakan\n(PIR)" as UC_PIR
+        usecase "Stream Video\n(ESP32-CAM → Backend)" as UC_CAM
+        usecase "Inferensi YOLO\n(Deteksi Orang)" as UC_YOLO
+        usecase "Aktifkan Relay &\nLampu Otomatis" as UC_RELAY
+        usecase "Timeout Kosong\n(30 detik)" as UC_TIMEOUT
+    }
+
+    package "Layer 3 — Failsafe & Manual Override" {
+        usecase "Toggle Saklar\nGlobal (Mode Hemat)" as UC_SAKLAR
+        usecase "Toggle Motor DC\n(Push Button)" as UC_BTN
+        usecase "Emergency\nShutdown (Dashboard)" as UC_EMERG
+        usecase "Reset PZEM\nEnergy Counter" as UC_PZEM
+        usecase "Monitor Dashboard\nReal-time" as UC_MONITOR
+    }
+}
+
+' Penghuni interactions
+Penghuni --> UC_PIR
+Penghuni --> UC_SAKLAR
+Penghuni --> UC_BTN
+
+' Operator interactions
+Operator --> UC_MONITOR
+Operator --> UC_EMERG
+Operator --> UC_PZEM
+
+' Internal flow
+UC_SENSOR ..> UC_WINDOW : <<include>>
+UC_PIR    ..> UC_CAM    : <<include>>
+UC_CAM    ..> UC_YOLO   : <<include>>
+UC_YOLO   ..> UC_RELAY  : <<include>>
+UC_RELAY  ..> UC_TIMEOUT : <<extend>>
+UC_EMERG  ..> UC_RELAY  : <<extend>>
+
+@enduml
