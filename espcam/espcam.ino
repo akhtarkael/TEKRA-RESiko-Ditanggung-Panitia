@@ -1,11 +1,10 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 
-// WiFi
-const char* ssid = "your-ssid"; //sesuaikan wifi yang terhubung
-const char* password = "your-passwd"; //sesuaikan password wifi
+const char* ssid = "YOUR_WIFI_SSID"; //sesuaikan wifi yang terhubung
+const char* password = "YOUR_WIFI_PASSWORD"; //sesuaikan password wifi
 
-// Pinout AI Thinker
+// Pinout AI Thinker ESP32-CAM
 #define PWDN_GPIO_NUM     32
 #define RESET_GPIO_NUM    -1
 #define XCLK_GPIO_NUM      0
@@ -52,10 +51,9 @@ void setup() {
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
   
-  // Biar gak berat dan lancar, resolusi di-set QVGA atau VGA
-  config.frame_size = FRAMESIZE_VGA; 
-  config.jpeg_quality = 12;
-  config.fb_count = 2; // Naikkin ke 2 biar streaming lebih mulus
+  config.frame_size = FRAMESIZE_QVGA; // 320x240, backend akan upscale ke 640x480 untuk YOLO
+  config.jpeg_quality = 20;
+  config.fb_count = 2;
 
   Serial.println("INIT KAMERA...");
   esp_err_t err = esp_camera_init(&config);
@@ -82,7 +80,6 @@ void loop() {
   if (client) {
     Serial.println("Ada yang nonton live stream!");
     
-    // Header wajib buat ngasih tau browser kalau ini VIDEO STREAMING (MJPEG)
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: multipart/x-mixed-replace; boundary=frame");
     client.println();
@@ -94,22 +91,18 @@ void loop() {
         break;
       }
 
-      // Kirim pembatas frame
       client.println("--frame");
       client.println("Content-Type: image/jpeg");
       client.print("Content-Length: ");
       client.println(fb->len);
       client.println();
       
-      // Kirim data gambarnya
       client.write(fb->buf, fb->len);
       client.println();
 
-      // Kembalikan buffer kamera biar bisa ngambil gambar selanjutnya
       esp_camera_fb_return(fb);
       
-      // Kasih delay dikit biar ESP32-CAM gak jantungan/panas
-      delay(30); 
+      delay(30); // ~30fps cap — QVGA cukup ringan untuk ini
     }
     
     client.stop();

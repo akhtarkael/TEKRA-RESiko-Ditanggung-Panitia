@@ -1,0 +1,100 @@
+@startuml activity_otomasi
+title HYDRA — Activity Diagram: Loop Otomasi Backend
+
+|Backend|
+
+start
+
+:Baca _shared:\nd = sensor.copy()\nada_orang, relay_on, relay_empty_since;
+
+if (MQTT client tersedia?) then (tidak)
+    :sleep 200ms;
+    stop
+endif
+
+' --- EMERGENCY FAN ---
+partition "Cek Emergency Fan" {
+    if (gas_ppm > 2500\nATAU kelembapan > 75%?) then (ya)
+        :publish cmd/motor {status:1}
+        motor_locked = True
+        motor_timer = now;
+        :log EMERGENCY;
+    else (tidak)
+        if (motor_locked = True\nDAN (now - motor_timer) ≥ 10s?) then (ya)
+            :motor_locked = False;
+        endif
+    endif
+}
+
+' --- RELAY UTAMA ---
+partition "Logika Relay Utama" {
+    if (emergency flag = True?) then (ya)
+        :relay_on = False
+        relay_empty_since = None;
+    else (tidak)
+        if (ada_orang = True?) then (ya)
+            :relay_on = True
+            relay_empty_since = None;
+        else (tidak)
+            if (relay_on = True?) then (ya)
+                if (relay_empty_since = None?) then (ya)
+                    :relay_empty_since = now;
+                else (tidak)
+                    if ((now - relay_empty_since)\n≥ RELAY_TIMEOUT (30s)?) then (ya)
+                        :relay_on = False
+                        relay_empty_since = None;
+                    endif
+                endif
+            endif
+        endif
+    endif
+    :Simpan relay_on & relay_empty_since\nke _shared (re-check emergency flag);
+}
+
+' --- WINDOW SERVO ---
+partition "Window Servo (Ventilasi)" {
+    if (kelembapan > 65%\nATAU gas_ppm > 1000 ppm?) then (ya)
+        :win = 1 (buka);
+    elseif (kelembapan < 50%\nDAN gas_ppm < 600 ppm?) then (ya)
+        :win = 0 (tutup);
+    else (tidak berubah)
+        :win = curr_win (pertahankan);
+    endif
+
+    if (win ≠ _last_win?) then (ya)
+        :publish cmd/window {status: win}\nretain=True
+        _last_win = win;
+        :log perubahan posisi servo;
+    endif
+}
+
+' --- RELAY & LAMPU ---
+partition "Relay Servo & Lampu" {
+    :relay = 1 jika (relay_on AND saklar=1)\nsinon 0;
+
+    if (relay ≠ _last_relay?) then (ya)
+        :publish cmd/servo {status: relay}\nretain=True
+        _last_relay = relay;
+    endif
+
+    if (motor_locked = False?) then (ya)
+        if (saklar = 0?) then (ya)
+            :publish cmd/lampu {status:0}
+            publish cmd/motor {status:0};
+        elseif (relay_on = True?) then (ya)
+            :publish cmd/lampu {status:1}
+            (motor: ON jika ada_orang\nDAN toggleMotor=1);
+        else (tidak)
+            :publish cmd/lampu {status:0}
+            publish cmd/motor {status:0};
+        endif
+    endif
+}
+
+:sleep 150ms;
+
+note right : Loop kembali ke atas\nselama backend berjalan
+
+stop
+
+@enduml

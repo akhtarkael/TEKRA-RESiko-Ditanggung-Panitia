@@ -1,6 +1,28 @@
+# IDE
 .vscode/**
 **/.vscode/**
-**/build/**
-**/.env
+
+# Python
 **/venv/
 **/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Environment
+**/.env
+
+# ML model weights
+**/*.pt
+**/*.onnx
+
+# Logs
+*.log
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Arduino build artifacts
+**/build/**
+**/.arduino15/
